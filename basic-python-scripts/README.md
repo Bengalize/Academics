@@ -1,7 +1,7 @@
 # Basic Python Scripts
 
 ## Overview
-This project contains basic Python scripts demonstrating fundamental programming concepts such as iteration, nested loops, basic arithmetic operations, efficiency analysis of search algorithms, numerical differentiation, and numerical integration.
+This project contains basic Python scripts demonstrating fundamental programming concepts such as iteration, nested loops, basic arithmetic operations, efficiency analysis of search algorithms, numerical differentiation, numerical integration, and basic password management.
 
 ## Scripts
 - **Nested List Printer**: A function to print all elements in a nested list.
@@ -16,6 +16,8 @@ This project contains basic Python scripts demonstrating fundamental programming
   - [Source Code](src/numerical_differentiation.py)
 - **Trapezoid Rule Integration**: A script to perform numerical integration using the Trapezoid Rule.
   - [Source Code](src/trapezoid_rule_integration.py)
+- **Password Manager**: A script for basic password management (save and load operations).
+  - [Source Code](src/password_manager.py)
 
 ## How to Run
 1. Clone the repository.
@@ -28,3 +30,4 @@ This project contains basic Python scripts demonstrating fundamental programming
    python efficiency_analysis.py
    python numerical_differentiation.py
    python trapezoid_rule_integration.py
+   python password_manager.py
