@@ -1,7 +1,7 @@
 # Basic Python Scripts
 
 ## Overview
-This project contains basic Python scripts demonstrating fundamental programming concepts such as iteration, nested loops, and basic arithmetic operations.
+This project contains basic Python scripts demonstrating fundamental programming concepts such as iteration, nested loops, basic arithmetic operations, and efficiency analysis of search algorithms.
 
 ## Scripts
 - **Nested List Printer**: A function to print all elements in a nested list.
@@ -10,6 +10,8 @@ This project contains basic Python scripts demonstrating fundamental programming
   - [Source Code](src/summation_calculator.py)
 - **Double Summation**: A function to compute a double summation.
   - [Source Code](src/double_summation.py)
+- **Efficiency Analysis for Linear and Binary Search**: A script to analyze the efficiency of linear and binary search algorithms.
+  - [Source Code](src/efficiency_analysis.py)
 
 ## How to Run
 1. Clone the repository.
@@ -19,3 +21,4 @@ This project contains basic Python scripts demonstrating fundamental programming
    python nested_list_printer.py
    python summation_calculator.py
    python double_summation.py
+   python efficiency_analysis.py
