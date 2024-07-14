@@ -1,7 +1,7 @@
 # Basic Python Scripts
 
 ## Overview
-This project contains basic Python scripts demonstrating fundamental programming concepts such as iteration, nested loops, basic arithmetic operations, efficiency analysis of search algorithms, and numerical differentiation.
+This project contains basic Python scripts demonstrating fundamental programming concepts such as iteration, nested loops, basic arithmetic operations, efficiency analysis of search algorithms, numerical differentiation, and numerical integration.
 
 ## Scripts
 - **Nested List Printer**: A function to print all elements in a nested list.
@@ -14,6 +14,8 @@ This project contains basic Python scripts demonstrating fundamental programming
   - [Source Code](src/efficiency_analysis.py)
 - **Numerical Differentiation**: A script to compute higher-order derivatives numerically.
   - [Source Code](src/numerical_differentiation.py)
+- **Trapezoid Rule Integration**: A script to perform numerical integration using the Trapezoid Rule.
+  - [Source Code](src/trapezoid_rule_integration.py)
 
 ## How to Run
 1. Clone the repository.
@@ -25,3 +27,4 @@ This project contains basic Python scripts demonstrating fundamental programming
    python double_summation.py
    python efficiency_analysis.py
    python numerical_differentiation.py
+   python trapezoid_rule_integration.py
