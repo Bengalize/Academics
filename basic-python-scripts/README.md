@@ -20,6 +20,8 @@ This project contains basic Python scripts demonstrating fundamental programming
   - [Source Code](src/password_manager.py)
 - **Fixed Point Iteration**: A script for finding roots using the fixed point iteration method.
   - [Source Code](src/fixed_point_iteration.py)
+- **Vehicle and Bus Classes**: Classes defining vehicle characteristics and bus specifics.
+  - [Source Code](src/vehicle.py)
 
 ## How to Run
 1. Clone the repository.
