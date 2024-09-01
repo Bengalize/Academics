@@ -13,14 +13,13 @@ This repository contains a comparative study of various sorting algorithms imple
 
 ## Installation
 
-To get started with this project, clone the repository and compile the Java files:
+To get started with this project, clone the repository and compile the  files:
 
 ```bash
 git clone https://github.com/yourusername/sorting-algorithms-performance-analysis.git
 cd sorting-algorithms-performance-analysis
 javac *.java
 ```
-
 ## Usage
 
 To run the performance analysis, execute the `Main` class. This will run the sorting algorithms on predefined data configurations and output the performance metrics to the console.
