@@ -1,0 +1,104 @@
+library(rio)
+Data <- import("path-to-csv")
+library(dplyr)
+
+# Calculate means, standard deviations, and standard errors for money and time for each condition
+condition_means <- Data %>%
+  group_by(where_bought, who_bought) %>%
+  summarise(
+    mean_money = mean(money),
+    mean_time = mean(time),
+    sd_money = sd(money),
+    sd_time = sd(time),
+    se_money = sd_money / sqrt(n()),
+    se_time = sd_time / sqrt(n()),
+  )
+print(condition_means)
+
+# Calculate degrees of freedom for each condition
+df_conditions <- Data %>%
+  group_by(where_bought, who_bought) %>%
+  summarise(df = n() - 1,
+            )
+df_conditions
+
+conf_interval <- condition_means %>%
+  mutate(
+    ci_low_money = mean_money - qt(0.975, 49) * se_money,
+    ci_high_money = mean_money + qt(0.975, 49) * se_money,
+    ci_low_time = mean_time - qt(0.975, 49) * se_time,
+    ci_high_time = mean_time + qt(0.975, 49) * se_time
+  )
+library(MOTE)
+
+##Store versus online when bought at the same retailer
+store_same <- Data %>%
+  filter(where_bought == "store", who_bought == "same")%>%
+  select(money) %>%
+  unlist()
+online_same <- Data %>%
+  filter(where_bought == "online", who_bought == "same")%>%
+  select(money) %>%
+  unlist()
+# Calculate means and standard deviations
+mean_store_same <- mean(store_same)
+mean_online_same <- mean(online_same)
+
+sd_store_same <- sd(store_same)
+sd_online_same <- sd(online_same)
+
+# Calculate effect size for money spent for "store" and "online" when bought at the same retailer
+effect_same_retailer <- d.ind.t(
+  mean_store_same, mean_online_same,
+  sd_store_same, sd_online_same,
+  length(store_same) - 1, length(online_same) - 1,
+  a = 0.05
+)
+effect_same_retailer$d
+
+##Store versus online when bought at a different retailer
+store_different <- Data %>%
+  filter(where_bought == "store", who_bought == "different")%>%
+  select(money) %>%
+  unlist()
+online_different <- Data %>%
+  filter(where_bought == "online", who_bought == "different")%>%
+  select(money) %>%
+  unlist()
+# Calculate means and standard deviations
+mean_store_different <- mean(store_different)
+mean_online_different <- mean(online_different)
+
+sd_store_different <- sd(store_different)
+sd_online_different <- sd(online_different)
+
+# Calculate effect size for money spent for "store" and "online" when bought at the same retailer
+effect_different_retailer <- d.ind.t(
+  mean_store_different, mean_online_different,
+  sd_store_different, sd_online_different,
+  length(store_different) - 1, length(online_different) - 1,
+  a = 0.05
+)
+effect_different_retailer$d
+
+library(pwr)
+
+# Effect sizes from the calculations
+effect_size_same_retailer <- effect_same_retailer$d
+effect_size_different_retailer <- effect_different_retailer$d
+
+# Significance level (α)
+alpha <- 0.05
+
+# Power (1 - β)
+power <- 0.80
+
+##Store versus online when bought at the same retailer
+sample_size_same_retailer <- pwr.t.test(d = effect_size_same_retailer, sig.level = alpha, power = power, type = "two.sample")$n
+
+##Store versus online when bought at a different retailer
+sample_size_different_retailer <- pwr.t.test(d = effect_size_different_retailer, sig.level = alpha, power = power, type = "two.sample")$n
+
+sample_size_same_retailer # 2.852122
+
+sample_size_different_retailer # 2.901572
