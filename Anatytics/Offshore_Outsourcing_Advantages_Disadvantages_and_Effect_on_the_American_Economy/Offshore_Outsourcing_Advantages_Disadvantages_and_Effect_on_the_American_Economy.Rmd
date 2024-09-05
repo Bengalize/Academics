@@ -1,0 +1,72 @@
+# Load necessary library and import the dataset
+library(rio)
+assess_score <- import("/Users/bengalycisse/Downloads/03_data.csv")
+
+# Part 1: Frequency Table and Histograms
+
+# 1) Create a frequency table of the percent of outsourced jobs
+frequency_table <- table(assess_score$jobs)
+print(frequency_table)
+
+# 2) Create histograms of the two types of cost savings with 15 breaks
+hist(assess_score$cost, breaks = 15, main = "Histogram of Cost Savings Method 1", xlab = "Cost Savings Method 1", col = "lightblue")
+hist(assess_score$cost2, breaks = 15, main = "Histogram of Cost Savings Method 2", xlab = "Cost Savings Method 2", col = "lightgreen")
+
+# 4) Calculate z-scores for each cost savings method
+mean1 <- mean(assess_score$cost)
+mean2 <- mean(assess_score$cost2)
+sd1 <- sd(assess_score$cost)
+sd2 <- sd(assess_score$cost2)
+
+# Z-scores calculation
+z <- (assess_score$cost - mean1) / sd1
+z2 <- (assess_score$cost2 - mean2) / sd2
+
+# Print z-scores
+cat("Z-scores for 'cost':", z, "\n")
+cat("Z-scores for 'cost2':", z2, "\n")
+
+# 6) Number of z-scores at p < .05 (more extreme than 95% of the data)
+num_extreme_z1 <- sum(abs(z) > 1.96)
+num_extreme_z2 <- sum(abs(z2) > 1.96)
+
+cat("Number of extreme z-scores for Cost Savings Method 1:", num_extreme_z1, "\n")
+cat("Number of extreme z-scores for Cost Savings Method 2:", num_extreme_z2, "\n")
+
+# 7) Find the business with the highest and lowest cost savings
+highest_cost_savings1 <- max(assess_score$cost)
+highest_cost_savings2 <- max(assess_score$cost2)
+highest_id1 <- assess_score$id[assess_score$cost == highest_cost_savings1]
+highest_id2 <- assess_score$id[assess_score$cost2 == highest_cost_savings2]
+
+lowest_cost_savings1 <- min(assess_score$cost)
+lowest_cost_savings2 <- min(assess_score$cost2)
+lowest_id1 <- assess_score$id[assess_score$cost == lowest_cost_savings1]
+lowest_id2 <- assess_score$id[assess_score$cost2 == lowest_cost_savings2]
+
+# Highest and lowest z-scores
+max_z1 <- max(z)
+min_z1 <- min(z)
+highest_z1 <- assess_score$id[z == max_z1]
+lowest_z1 <- assess_score$id[z == min_z1]
+
+max_z2 <- max(z2)
+min_z2 <- min(z2)
+highest_z2 <- assess_score$id[z2 == max_z2]
+lowest_z2 <- assess_score$id[z2 == min_z2]
+
+# Print results
+cat("Highest cost savings (Method 1):", highest_id1, "with amount", highest_cost_savings1, "\n")
+cat("Highest cost savings (Method 2):", highest_id2, "with amount", highest_cost_savings2, "\n")
+cat("Lowest cost savings (Method 1):", lowest_id1, "with amount", lowest_cost_savings1, "\n")
+cat("Lowest cost savings (Method 2):", lowest_id2, "with amount", lowest_cost_savings2, "\n")
+cat("Highest z-score (Method 1):", highest_z1, "with ID", highest_z1, "\n")
+cat("Lowest z-score (Method 1):", lowest_z1, "with ID", lowest_z1, "\n")
+cat("Highest z-score (Method 2):", highest_z2, "with ID", highest_z2, "\n")
+cat("Lowest z-score (Method 2):", lowest_z2, "with ID", lowest_z2, "\n")
+
+
+
+
+
+
