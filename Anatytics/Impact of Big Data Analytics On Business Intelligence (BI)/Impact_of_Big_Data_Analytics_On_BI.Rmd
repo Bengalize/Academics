@@ -1,0 +1,201 @@
+# Load necessary library
+library(ggplot2)
+
+# Accuracy checks 
+str(Data)
+summary(Data)
+Data$expectability <- pmax(1, pmin(7, Data$expectability))
+Data$relativity <- pmax(1, pmin(7, Data$relativity))
+Data$positive <- pmax(1, pmin(7, Data$positive))
+summary(Data)
+
+# Handle missing data
+library(VIM, quietly = T)
+aggr(Data, numbers = T)
+percentmiss <- function(x){ sum(is.na(x))/length(x) * 100 }
+missing <- apply(Data, 1, percentmiss)
+table(missing)
+
+replace_rows <- subset(Data, missing <= 20) #5%
+noreplace_rows <- subset(Data, missing > 20)
+
+# Mahalanobis distance for outlier detection
+mahal <- mahalanobis(replace_rows[, -c(1)], 
+                     colMeans(replace_rows[, -c(1)], na.rm = TRUE),
+                     cov(replace_rows[, -c(1)], use = "pairwise.complete.obs"))
+
+cutoff <- qchisq(1 - 0.001, ncol(replace_rows[, -c(1)]))
+
+mahal_summary <- summary(mahal[mahal > cutoff])
+print(mahal_summary)
+
+ncol(replace_rows[, -c(1)])
+cutoff
+
+noout <- replace_rows[mahal < cutoff, ]
+dim(replace_rows)
+dim(noout)
+
+# Linearity check
+random <- rchisq(nrow(noout), 7) 
+fake <- lm(random ~ ., #Y is predicted by all variables in the data
+           data = noout) 
+standardized <- rstudent(fake)
+fitvalues <- scale(fake$fitted.values)
+{qqnorm(standardized)
+abline(0,1)}
+
+# Normality check
+hist(noout$temporality)
+hist(noout$expectability)
+hist(noout$relativity)
+hist(noout$positive)
+
+# Homogeneity check
+{plot(fitvalues, standardized) 
+abline(0,0)
+abline(v = 0)}
+
+
+
+# Create scatter plot
+ggplot(replace_rows, aes(x = replace_rows$temporality, y = replace_rows$relativity)) +
+geom_point() +  # Plot points
+geom_smooth(method = "lm", se = FALSE, color = "blue") +
+labs(x = "Temporality", y = "Relativity") +  # Axis labels
+ggtitle("Scatter Plot of Relativity vs Temporality ")  # Plot title
+
+# Positive Emotion vs Expectability
+ggplot(replace_rows, aes(x = expectability, y = positive)) +
+  geom_point() +  # Plot points
+  geom_smooth(method = "lm", se = FALSE, color = "green") +
+  labs(x = "Expectability", y = "Positive") +  # Axis labels
+  ggtitle("Scatter Plot of Positive Emotion vs Expectability")  # Plot title
+
+# Expectability vs Relativity (by Gender)
+ggplot(replace_rows, aes(x = relativity, y =expectability )) +
+  geom_point() +  # Plot points
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(x = "Relativity", y = "Expectability") +  # Axis labels
+  ggtitle("Scatter Plot of Expectabilty vs Relativity grouping by gender")  # Plot title
+
+## Correlation Analysis
+
+# a. Calculate Pearson correlation
+pearson_corr <- cor(replace_rows[, -1], method = "pearson")
+
+# b. Calculate Spearman correlation
+spearman_corr <- cor(replace_rows[, -1], method = "spearman")
+
+# c. Calculate Kendall correlation
+kendall_corr <- cor(replace_rows[, -1], method = "kendall")
+
+# Display correlation tables
+print("a. Pearson Correlation:")
+print(pearson_corr)
+
+print("b. Spearman Correlation:")
+print(spearman_corr)
+
+print("c. Kendall Correlation:")
+print(kendall_corr)
+
+# Find the strongest correlation
+strongest_corr <- max(abs(pearson_corr), abs(spearman_corr), abs(kendall_corr))
+strongest_method <- ifelse(strongest_corr == abs(pearson_corr), "Pearson",
+                           ifelse(strongest_corr == abs(spearman_corr), "Spearman", "Kendall"))
+cat("d. The strongest correlation method is:", strongest_method, "\n")
+
+# Calculate confidence intervals for 'temporality'
+temporality_mean <- mean(replace_rows$temporality, na.rm = TRUE)  # Calculate mean
+temporality_sd <- sd(replace_rows$temporality, na.rm = TRUE)  # Calculate standard deviation
+n_temporality <- sum(!is.na(replace_rows$temporality))  # Number of non-missing values
+
+# Calculate standard error
+se_temporality <- temporality_sd / sqrt(n_temporality)
+
+# Set the confidence level (e.g., 95%)
+confidence_level <- 0.95
+
+# Calculate margin of error
+margin_of_error_temporality <- qt((1 - confidence_level) / 2 + confidence_level, n_temporality - 1) * se_temporality
+
+# Calculate confidence interval
+temporality_ci <- c(temporality_mean - margin_of_error_temporality, temporality_mean + margin_of_error_temporality)
+temporality_ci  # Display confidence interval for 'temporality'
+
+# Similarly, calculate confidence intervals for 'relativity' (following the same steps)
+relativity_mean <- mean(replace_rows$relativity, na.rm = TRUE)
+relativity_sd <- sd(replace_rows$relativity, na.rm = TRUE)
+n_relativity <- sum(!is.na(replace_rows$relativity))
+
+se_relativity <- relativity_sd / sqrt(n_relativity)
+margin_of_error_relativity <- qt((1 - confidence_level) / 2 + confidence_level, n_relativity - 1) * se_relativity
+relativity_ci <- c(relativity_mean - margin_of_error_relativity, relativity_mean + margin_of_error_relativity)
+relativity_ci  # Display confidence interval for 'relativity'
+
+# Calculate correlations
+cor_temp_expect <- cor(replace_rows$temporality, replace_rows$expectability, method = "pearson", use = "complete.obs")
+cor_temp_positive <- cor(replace_rows$temporality, replace_rows$positive, method = "pearson", use = "complete.obs")
+
+# Calculate the difference in correlations
+diff_corr <- abs(cor_temp_expect) - abs(cor_temp_positive)
+
+# Display results
+cor_temp_expect
+cor_temp_positive
+diff_corr
+
+## Difference in correlations for temporality and expectability; and temporality and positive emotion
+
+# Calculate correlations
+cor_temp_expect <- cor(replace_rows$temporality, replace_rows$expectability, method = "pearson", use = "complete.obs")
+cor_temp_positive <- cor(replace_rows$temporality, replace_rows$positive, method = "pearson", use = "complete.obs")
+
+# Calculate the difference in correlations
+diff_corr <- abs(cor_temp_expect) - abs(cor_temp_positive)
+
+# Display results
+cor_temp_expect
+cor_temp_positive
+diff_corr
+
+## Difference in correlations for gender on temporality and relativity
+
+# Remove rows with NA values in both 'temporality' and 'relativity' columns
+replace_rows_complete <- replace_rows[complete.cases(replace_rows[, c("temporality", "relativity")]), ]
+
+# Calculate the correlation between 'gender' and 'temporality'
+cor_gender_temporality <- cor(replace_rows_complete$gender, replace_rows_complete$temporality, method = "pearson")
+
+# Calculate the correlation between 'gender' and 'relativity'
+cor_gender_relativity <- cor(replace_rows_complete$gender, replace_rows_complete$relativity, method = "pearson")
+
+# Calculate the difference in correlations
+diff_corr_gender <- cor_gender_temporality - cor_gender_relativity
+
+# Display results
+cor_gender_temporality
+cor_gender_relativity
+diff_corr_gender
+
+# Partial and semipartial correlations for all variables:
+
+library(ppcor)
+
+# Select columns of interest (excluding 'gender' for partial and semipartial correlations)
+cols_of_interest <- c("temporality", "expectability", "relativity", "positive")
+
+# Remove rows with missing values in selected columns
+replace_rows_complete <- na.omit(replace_rows[cols_of_interest])
+
+# Compute partial correlations without missing values
+partial_corr <- pcor(as.matrix(replace_rows_complete), method = "pearson")
+
+# Compute semipartial correlations for each variable with 'gender'
+semipartial_corr <- sPCor(as.matrix(replace_rows_complete), as.matrix(replace_rows$gender), method = "pearson")
+
+# Display partial correlations
+partial_corr$estimate
+# Display semipartial correlations
+semipartial_corr$estimate
