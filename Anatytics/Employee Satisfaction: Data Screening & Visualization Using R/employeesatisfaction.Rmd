@@ -1,0 +1,81 @@
+# Load necessary libraries
+library(rio)
+library(VIM)
+library(mice)
+library(Hmisc)
+library(corrplot)
+
+# Import the dataset
+Data <- import("path_to/06_data.csv")
+
+# Data Screening
+# Accuracy
+Data$Begin <- pmax(2, pmin(100, Data$Begin))
+Data$After <- pmax(2, pmin(100, Data$After))
+
+# Check for missing data
+summary(Data)
+apply(Data, 2, function(x) { sum(is.na(x)) })
+
+# Handle missing data
+aggr(Data, numbers = TRUE)
+percentmiss <- function(x) { sum(is.na(x)) / length(x) * 100 }
+missing <- apply(Data, 1, percentmiss)
+replace_rows <- subset(Data, missing <= 20)
+noreplace_rows <- subset(Data, missing > 20)
+
+replace_columns <- replace_rows[ , -c(1,2,4)]
+noreplace_columns <- replace_rows[ , c(1,2,4)]
+
+temp_no_miss <- mice(replace_columns)
+nomiss <- complete(temp_no_miss, 1)
+
+replace_columns <- replace_rows
+summary(replace_columns)
+
+# Outliers
+mahal <- mahalanobis(replace_columns[ , -c(1,4)],
+                    colMeans(replace_columns[ , -c(1,4)], na.rm = TRUE),
+                    cov(replace_columns[ , -c(1,4)], use = "pairwise.complete.obs"))
+
+cutoff <- qchisq(1 - 0.001, ncol(replace_columns[ , -c(1,4)]))
+mahal_summary <- summary(mahal[mahal > cutoff])
+print(mahal_summary)
+
+noout <- subset(replace_columns, mahal < cutoff)
+dim(replace_columns)
+dim(noout)
+
+# Additivity
+continuous_data <- replace_columns[, -c(1, 4)]  
+cor_matrix <- cor(continuous_data, use = "complete.obs")
+
+get_corr_table <- function(matrix) {
+  correlation <- cor(matrix, use = "complete.obs")
+  cutpoints <- c(0.3, 0.4, 0.5, 0.6)
+  labels <- c("****", "***", "**", "*", "")
+  
+  symnum(correlation, corr = TRUE, na = FALSE, cutpoints = cutpoints, symbols = labels)
+}
+
+correlation_table <- get_corr_table(continuous_data)
+print(correlation_table)
+corrplot(cor(noout[, -c(1,4)]))
+
+# Linearity
+random <- rchisq(nrow(noout), 7)
+fake <- lm(random ~ ., data = noout)
+standardized <- rstudent(fake)
+fitvalues <- scale(fake$fitted.values)
+qqnorm(standardized)
+abline(0, 1)
+
+# Normality
+hist(noout$Begin)
+hist(noout$Middle)
+hist(noout$After)
+
+# Homogeneity/Homoscedasticity
+plot(fitvalues, standardized)
+abline(0, 0)
+abline(v = 0)
