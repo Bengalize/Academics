@@ -2,7 +2,7 @@ library(rio)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-b2b <- import("/Users/bengalycisse/Downloads/05_data.csv")
+b2b <- import("Path_to/05_data.csv")
 
 # Sales at time 1 Histogram
 ggplot(data = b2b,aes(x=time.1)) + geom_histogram()
