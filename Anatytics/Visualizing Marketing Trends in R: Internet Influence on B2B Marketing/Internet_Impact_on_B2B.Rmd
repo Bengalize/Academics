@@ -1,0 +1,76 @@
+library(rio)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+b2b <- import("/Users/bengalycisse/Downloads/05_data.csv")
+
+# Sales at time 1 Histogram
+ggplot(data = b2b,aes(x=time.1)) + geom_histogram()
+
+# Sales at time 2 Histogram
+ggplot(data = b2b,aes(x=time.2)) + geom_histogram()
+
+# Bar chart with two independent variables:
+    # a.	Business focus, internet, DV: sales at time 2
+ggplot(data = b2b, aes(x = id, y = time.2, fill = internet)) + geom_bar(stat = "identity")+
+  labs(x = "Business ID", y = "Sales at Time 2", title = "Business Sales at Time 2 vs. ID by Internet Usage") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better visibility
+
+# Bar chart with two independent variables: 
+    # a.	Time (time 1, time 2), Business focus, DV: is sales from time 1 and 2
+
+# Group by Business Focus and calculate average sales for time 1 and time 2
+sales_avg <- b2b %>%
+  group_by(biz_focus) %>%
+  summarise(avg_sales_score_time1 = mean(time.1),
+            avg_sales_score_time2 = mean(time.2)) %>%
+  gather(key = "time", value = "avg_sales_score", -biz_focus)
+
+# Plot the bar chart
+ggplot(sales_avg, aes(x = biz_focus, y = avg_sales, fill = time)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  labs(x = "Business Focus", y = "Average Sales Score ", fill = "Time") +
+  theme_minimal()
+
+
+library(ggplot2)
+
+# Create a data frame for plotting
+sales_data <- data.frame(
+  Time = rep(c("time.1", "time.2"), each = nrow(b2b)),
+  Sales = c(b2b$time.1, b2b$time.2)
+)
+
+# Create the line graph
+ggplot(sales_data, aes(x = Time, y = Sales, group = 1)) +
+  geom_line() +
+  geom_point() +
+  labs(x = "Time", y = "Sales", title = "Sales over Time") +
+  theme_minimal()
+
+
+# simple line graph: 
+ # a.	Time (time 1, time 2), DV: is sales from time 1 and 2 
+
+# simple scatterplot:
+    #Sales at Time 1, Time 2
+
+# Create a scatter plot
+plot(b2b$time.1, b2b$time.2, 
+     xlab = "Sales at Time 1", ylab = "Sales at Time 2",
+     main = "Scatter Plot of Sales at Time 1 vs Time 2")
+
+grouped scatterplot:
+
+    a.	Sales at time 1 and 2, Business focus
+
+```{r scatter2}
+library(ggplot2)
+
+# Grouped scatter plot
+ggplot(b2b, aes(x = time.1, y = time.2, color = factor(biz_focus))) +
+  geom_point() +
+  xlab("Sales at Time 1") +
+  ylab("Sales at Time 2") +
+  ggtitle("Grouped Scatter Plot of Sales at Time 1 and Time 2 by Business Focus")
+
