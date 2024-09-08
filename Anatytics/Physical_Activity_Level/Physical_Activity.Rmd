@@ -1,0 +1,204 @@
+knitr::opts_chunk$set(echo = TRUE)
+library(rio)
+Data <- import("path_to/09_data.csv")
+install.packages("pwr")
+
+# Accuracy
+
+str(Data)
+summary(Data)
+
+# Missing Data
+
+summary(Data)
+library(VIM, quietly = T)
+aggr(Data, numbers = T)
+percentmiss <- function(x){ sum(is.na(x))/length(x) * 100 }
+missing <- apply(Data, 1, percentmiss)
+table(missing)
+
+replace_rows <- subset(Data, missing <= 20) #5%
+noreplace_rows <- subset(Data, missing > 20)
+
+# Outliers
+
+mahal <- mahalanobis(replace_rows[, -c(1)], 
+                     colMeans(replace_rows[, -c(1)], na.rm = TRUE),
+                     cov(replace_rows[, -c(1)], use = "pairwise.complete.obs"))
+
+cutoff <- qchisq(1 - 0.001, ncol(replace_rows[, -c(1)]))
+
+mahal_summary <- summary(mahal[mahal > cutoff])
+print(mahal_summary)
+
+ncol(replace_rows[, -c(1)])
+cutoff
+noout <- replace_rows[mahal < cutoff, ]
+dim(replace_rows)
+dim(noout)
+
+# Linearity
+
+random <- rchisq(nrow(noout), 7) 
+fake <- lm(random ~ ., 
+           data = noout) 
+standardized <- rstudent(fake)
+fitvalues <- scale(fake$fitted.values)
+{qqnorm(standardized)
+  abline(0,1)}
+
+# Normality
+
+hist(noout$PAL_acc)
+hist(noout$PAL_cell)
+
+# Homogeneity/Homoscedasticity
+
+{plot(fitvalues, standardized) 
+abline(0,0)
+abline(v = 0)}
+
+# Independent t-test
+
+# Means and standard deviations for groups
+means <- aggregate(noout$PAL_cell, by = list(noout$gender), FUN = mean)
+sds <- aggregate(noout$PAL_cell, by = list(noout$gender), FUN = sd)
+
+# Print means and standard deviations
+print(means)
+print(sds)
+
+# Independent t-test
+ind_t_test <- t.test(PAL_cell ~ gender, data = noout, var.equal = TRUE)
+
+# Check for significant difference
+ind_t_test
+
+library(dplyr)
+
+# Compute mean, standard deviation, and count using dplyr
+summary_stats <- noout %>%
+  group_by(gender) %>%
+  summarise(mean_PAL_cell = mean(PAL_cell, na.rm = TRUE),
+            sd_PAL_cell = sd(PAL_cell, na.rm = TRUE),
+            count = n())
+
+summary_stats
+
+# Effect Size
+
+library(MOTE)
+
+effect <- d.ind.t(m1 = summary_stats$mean_PAL_cell[2], m2 = summary_stats$mean_PAL_cell[1],        
+                  sd1 = summary_stats$sd_PAL_cell[2], sd2 = summary_stats$sd_PAL_cell[1],        
+                  n1 = 96, n2 = 92, a = .05)
+effect$d
+
+# Power
+library(pwr)
+pwr.t.test(n = NULL, #leave NULL
+           d = effect$d, #effect size
+           sig.level = .05, #alpha
+           power = .80, #power 
+           type = "two.sample", #independent
+           alternative = "two.sided") #two tailed test
+
+# Graphs:
+library(ggplot2)
+
+# Data for bar plot 
+gender <- c("Female", "Male")
+means <- c(56.68926, 74.29241)  
+
+# Create a data frame for the bar plot
+data_gender <- data.frame(gender, means)
+
+# Create the bar plot
+ggplot(data_gender, aes(x = gender, y = means, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Physical Activity Levels by Gender (Cell Phones)",
+       x = "Gender",
+       y = "Physical Activity Levels") +
+  theme_minimal()
+
+# Dependent t-test
+# Means and standard deviations for the groups (cell phone and handheld accelerometer)
+mean_cell <- mean(noout$PAL_cell)
+mean_acc <- mean(noout$PAL_acc)
+
+sd_cell <- sd(noout$PAL_cell)
+sd_acc <- sd(noout$PAL_acc)
+
+# Print means and standard deviations
+cat("Means:\n")
+cat("Cell Phone: ", mean_cell, "\n")
+cat("Handheld Accelerometer: ", mean_acc, "\n\n")
+
+cat("Standard Deviations:\n")
+cat("Cell Phone: ", sd_cell, "\n")
+cat("Handheld Accelerometer: ", sd_acc, "\n\n")
+
+# Dependent t-test
+dep_t_test <- t.test(noout$PAL_cell, noout$PAL_acc, paired = TRUE)
+
+# Check for significant difference
+dep_t_test
+
+# Effect Size
+
+# Calculate the differences
+differences <- noout$PAL_cell - noout$PAL_acc
+
+# Standard deviation of the differences
+sd_differences <- sd(differences)
+
+# Calculate Cohen's d
+effect_size <- 3.784581 / sd_differences
+effect_size
+
+# Power
+# Effect size (Cohen's d) calculated previously
+effect_size <- 3.784581 / sd_differences  # Assuming you've calculated this
+
+# Desired power level
+desired_power <- 0.80
+
+# Perform power calculation
+library(pwr)
+result <- pwr.t.test(d = effect_size, sig.level = 0.05, power = desired_power, type = "paired")
+
+# Extract the estimated sample size
+estimated_sample_size <- ceiling(result$n)
+estimated_sample_size
+
+# Graphs
+# Means for cell phone and handheld accelerometer
+means <- c(mean_cell, mean_acc)
+
+# Labels for the bars
+labels <- c("Cell Phone", "Handheld Accelerometer")
+
+# Estimated sample size
+sample_size <- c(0, estimated_sample_size)  # 0 for the observed means, estimated sample size for the last bar
+
+# Create a data frame
+data <- data.frame(Method = labels, Means = means, Sample_Size = sample_size)
+
+# Load ggplot2 library
+library(ggplot2)
+
+# Create the bar plot
+bar_plot <- ggplot(data, aes(x = Method, y = Means, fill = Method)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = ifelse(Sample_Size > 0, paste("n =", Sample_Size), "")),
+            vjust = -0.5, size = 3, position = position_dodge(width = 1)) +
+  labs(title = "Cell Phone vs. Hand Held Accelerometer Measurements of Physical Activity ",
+       x = "Measurement Method",
+       y = "Means") +
+  theme_minimal()
+
+# Display the bar plot
+print(bar_plot)
+
+
+
