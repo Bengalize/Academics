@@ -1,0 +1,373 @@
+---
+title: "t-Tests"
+author: "Bengaly Cisse"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rio)
+Data <- import("/Users/bengalycisse/Downloads/Class/ANLY 500/09_data.csv")
+ install.packages("pwr")
+```
+
+*Title*: Estimation of physical activity levels using cell phone questionnaires: A comparison with accelerometry for evaluation of between-subject and within-subject variations
+
+*Abstract*: Physical activity promotes health and longevity. From a business perspective, healthier employees are more likely to report to work, miss less days, and cost less for health insurance. Your business wants to encourage healthy livestyles in a cheap and affordable way through health care incentive programs. The use of telecommunication technologies such as cell phones is highly interesting in this respect. In an earlier report, we showed that physical activity level (PAL) assessed using a cell phone procedure agreed well with corresponding estimates obtained using the doubly labeled water method. However, our earlier study indicated high within-subject variation in relation to between-subject variations in PAL using cell phones, but we could not assess if this was a true variation of PAL or an artifact of the cell phone technique. Objective: Our objective was to compare within- and between-subject variations in PAL by means of cell phones with corresponding estimates using an accelerometer. In addition, we compared the agreement of daily PAL values obtained using the cell phone questionnaire with corresponding data obtained using an accelerometer. 
+
+# Dataset: 
+
+    -	Gender: male and female subjects were examined in this experiment.
+    -   PAL_cell: average physical activity values for the cell phone accelerometer (range 0-100).
+    -	PAL_acc: average physical activity values for the hand held accelerometer (range 0-100).
+
+APA write ups should include means, standard deviation/error, t-values, p-values, effect size, and a brief description of what happened in plain English.
+
+```{r starting}
+
+```
+
+# Data screening:
+
+## Accuracy:
+    a)	Include output and indicate how the data are not accurate.
+    b)	Include output to show how you fixed the accuracy errors, and describe what you did.
+      I haven't noticed any particular accuracy errors. I'll handle missing values in the next section
+```{r accuracy}
+# a.
+str(Data)
+summary(Data)
+# b.
+# I haven't noticed any particular accuracy errors. I'll handle missing values in the next section
+```
+
+## Missing data:
+    a)	Include output that shows you have missing data.
+    b)	Include output and a description that shows what you did with the missing data.
+    I used functions from the "VIM" package in R to manage missing data in my dataset. Initially, I visually examined the missing data patterns using the aggr() function. Then, I calculated the percentage of missing values in each row by creating a custom function, percentmiss(), which I applied across the dataset using apply(). To handle the missing data, I divided my dataset into two subsets: one (replace_rows) containing rows with 20% or fewer missing values and another (noreplace_rows) containing rows with more than 20% missing data.
+
+
+        
+```{r missing}
+# a. 
+summary(Data)
+# b.
+library(VIM, quietly = T)
+aggr(Data, numbers = T)
+percentmiss <- function(x){ sum(is.na(x))/length(x) * 100 }
+missing <- apply(Data, 1, percentmiss)
+table(missing)
+
+replace_rows <- subset(Data, missing <= 20) #5%
+noreplace_rows <- subset(Data, missing > 20)
+```
+
+## Outliers:
+    a)	Include a summary of your mahal scores that are greater than the cutoff.
+    See below
+    b)	What are the df for your Mahalanobis cutoff?
+    df = 2
+    c)	What is the cut off score for your Mahalanobis measure?
+    cut off score = 13.81551
+    d)	How many outliers did you have?
+    Number of Outlier = 188-188 = 0
+    e)	Delete all outliers. 
+    
+```{r outliers}
+# a & b
+mahal <- mahalanobis(replace_rows[, -c(1)], 
+                     colMeans(replace_rows[, -c(1)], na.rm = TRUE),
+                     cov(replace_rows[, -c(1)], use = "pairwise.complete.obs"))
+
+cutoff <- qchisq(1 - 0.001, ncol(replace_rows[, -c(1)]))
+
+mahal_summary <- summary(mahal[mahal > cutoff])
+print(mahal_summary)
+
+# c.
+ncol(replace_rows[, -c(1)])
+cutoff
+
+# d.
+noout <- replace_rows[mahal < cutoff, ]
+dim(replace_rows)
+dim(noout)
+
+```
+
+# Assumptions:
+
+## Additivity: 
+    a)  We won't need to calculate a correlation table. Why not?
+    Because we are not trying to get the correlation between the variable . Rather we're doing a comparision
+## Linearity: 
+    a)  Include a picture that shows how you might assess multivariate linearity.
+    b)  Do you think you've met the assumption for linearity?
+    Yes
+    
+```{r linearity}
+random <- rchisq(nrow(noout), 7) 
+fake <- lm(random ~ ., 
+           data = noout) 
+standardized <- rstudent(fake)
+fitvalues <- scale(fake$fitted.values)
+{qqnorm(standardized)
+  abline(0,1)}
+```
+
+## Normality: 
+    a)  Include a picture that shows how you might assess multivariate normality.
+    b)  Do you think you've met the assumption for normality? 
+    Yes
+
+```{r normality}
+hist(noout$PAL_acc)
+hist(noout$PAL_cell)
+```
+
+## Homogeneity/Homoscedasticity: 
+    a)  Include a picture that shows how you might assess multivariate homogeneity.
+    b)  Do you think you've met the assumption for homogeneity?
+    I'd say yes
+    c)  Do you think you've met the assumption for homoscedasticity?
+    I'd say yes
+
+```{r homog-s}
+{plot(fitvalues, standardized) 
+abline(0,0)
+abline(v = 0)}
+```
+
+# Independent t-test:
+
+1)	Run an independent t-test to determine if there are differences in gender for the cell phone measurement of physical activity level.
+    a.	Use the equal variances option to adjust for problems with homogeneity (if necessary). 
+    b.	Include means and sds for your groups. 
+    c.	Is there a significant difference in the ratings? 
+      Yes, there is a significant difference in the physical activity levels measured by cell phones between genders.
+
+
+```{r ind1}
+# Means and standard deviations for groups
+means <- aggregate(noout$PAL_cell, by = list(noout$gender), FUN = mean)
+sds <- aggregate(noout$PAL_cell, by = list(noout$gender), FUN = sd)
+
+# Print means and standard deviations
+print(means)
+print(sds)
+
+# Independent t-test
+ind_t_test <- t.test(PAL_cell ~ gender, data = noout, var.equal = TRUE)
+
+# Check for significant difference
+ind_t_test
+
+library(dplyr)
+
+# Compute mean, standard deviation, and count using dplyr
+summary_stats <- noout %>%
+  group_by(gender) %>%
+  summarise(mean_PAL_cell = mean(PAL_cell, na.rm = TRUE),
+            sd_PAL_cell = sd(PAL_cell, na.rm = TRUE),
+            count = n())
+
+summary_stats
+
+
+
+
+```
+
+2)	Effect size: What is the effect size for this difference? Be sure to list which effect size you are using. 
+2.430459
+
+```{r effect1}
+library(MOTE)
+
+effect <- d.ind.t(m1 = summary_stats$mean_PAL_cell[2], m2 = summary_stats$mean_PAL_cell[1],        
+                  sd1 = summary_stats$sd_PAL_cell[2], sd2 = summary_stats$sd_PAL_cell[1],        
+                  n1 = 96, n2 = 92, a = .05)
+effect$d
+
+
+```
+
+3)	Power: Determine the number of participants you should have used in this experiment given the effect size you found above. 
+
+According to the power analysis, we should aim to have at least 4 participants in each group to achieve 80% power with a significance level of 0.05 
+
+```{r power1}
+library(pwr)
+pwr.t.test(n = NULL, #leave NULL
+           d = effect$d, #effect size
+           sig.level = .05, #alpha
+           power = .80, #power 
+           type = "two.sample", #independent
+           alternative = "two.sided") #two tailed test
+```
+
+4)	Graphs: Include a bar graph of these results.
+
+```{r graph1}
+library(ggplot2)
+
+# Data for bar plot 
+gender <- c("Female", "Male")
+means <- c(56.68926, 74.29241)  
+
+# Create a data frame for the bar plot
+data_gender <- data.frame(gender, means)
+
+# Create the bar plot
+ggplot(data_gender, aes(x = gender, y = means, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Physical Activity Levels by Gender (Cell Phones)",
+       x = "Gender",
+       y = "Physical Activity Levels") +
+  theme_minimal()
+		
+	
+```
+
+5)	Write up: include an APA style results section for this analysis (just the t-test not all the data screening).
+AThe mean physical activity level for female participants (M = 56.69, SD = 7.28) was significantly lower than that of male participants (M = 74.29, SD = 7.20), t(186) = -16.66, p < .001. The effect size, was found to be 2.43
+
+Additionally, a 95% confidence interval indicated that the true difference in means between female and male groups was between -19.69 and -15.52.
+
+These findings suggest a substantial and statistically significant difference in physical activity levels measured by cell phones between male and female participants, with males exhibiting  higher activity levels compared to females.
+# Dependent t-test:
+
+6)	Run a dependent t-test to tell if there are differences in the cell phone and hand held accelerometer results.
+    a.	Include means and sds for your groups. 
+    b.	Is there a significant difference in the ratings? 
+    These results indicate a statistically significant difference between the ratings obtained from the cell phone and handheld accelerometer measurements of physical activity levels.
+
+```{r dep1}
+# Means and standard deviations for the groups (cell phone and handheld accelerometer)
+mean_cell <- mean(noout$PAL_cell)
+mean_acc <- mean(noout$PAL_acc)
+
+sd_cell <- sd(noout$PAL_cell)
+sd_acc <- sd(noout$PAL_acc)
+
+# Print means and standard deviations
+cat("Means:\n")
+cat("Cell Phone: ", mean_cell, "\n")
+cat("Handheld Accelerometer: ", mean_acc, "\n\n")
+
+cat("Standard Deviations:\n")
+cat("Cell Phone: ", sd_cell, "\n")
+cat("Handheld Accelerometer: ", sd_acc, "\n\n")
+
+# Dependent t-test
+dep_t_test <- t.test(noout$PAL_cell, noout$PAL_acc, paired = TRUE)
+
+# Check for significant difference
+dep_t_test
+
+```
+
+7)	Effect size: What is the effect size for this difference? Be sure to list which effect size you are using. 
+0.4974576
+```{r effect2}
+
+# Calculate the differences
+differences <- noout$PAL_cell - noout$PAL_acc
+
+# Standard deviation of the differences
+sd_differences <- sd(differences)
+
+# Calculate Cohen's d
+effect_size <- 3.784581 / sd_differences
+effect_size
+
+```
+
+8)	Power: Determine the number of participants you should have used in this experiment given the effect size you found above. 
+34
+```{r power2}
+# Effect size (Cohen's d) calculated previously
+effect_size <- 3.784581 / sd_differences  # Assuming you've calculated this
+
+# Desired power level
+desired_power <- 0.80
+
+# Perform power calculation
+library(pwr)
+result <- pwr.t.test(d = effect_size, sig.level = 0.05, power = desired_power, type = "paired")
+
+# Extract the estimated sample size
+estimated_sample_size <- ceiling(result$n)
+estimated_sample_size
+
+```
+
+9)	Graphs: Include a bar graph of these results.
+
+```{r graph2}
+
+# Means for cell phone and handheld accelerometer
+means <- c(mean_cell, mean_acc)
+
+# Labels for the bars
+labels <- c("Cell Phone", "Handheld Accelerometer")
+
+# Estimated sample size
+sample_size <- c(0, estimated_sample_size)  # 0 for the observed means, estimated sample size for the last bar
+
+# Create a data frame
+data <- data.frame(Method = labels, Means = means, Sample_Size = sample_size)
+
+# Load ggplot2 library
+library(ggplot2)
+
+# Create the bar plot
+bar_plot <- ggplot(data, aes(x = Method, y = Means, fill = Method)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = ifelse(Sample_Size > 0, paste("n =", Sample_Size), "")),
+            vjust = -0.5, size = 3, position = position_dodge(width = 1)) +
+  labs(title = "Comparison of Physical Activity Measurement Methods",
+       x = "Measurement Method",
+       y = "Means") +
+  theme_minimal()
+
+# Display the bar plot
+print(bar_plot)
+
+```
+
+10)	Write up: include an APA style results section for this analysis (just the t-test not all the data screening).
+
+A paired-samples t-test was conducted to compare physical activity measurements obtained using cell phones versus handheld accelerometers. The mean physical activity level measured by cell phones (M = 65.68, SD = 11.40) was significantly higher than that obtained from handheld accelerometers (M = 61.89, SD = 12.69), t(187) = 6.82, p < .001. The effect size, as measured by Cohen's d, was 0.49, indicating a moderate effect size.
+
+Additionally, the estimated sample size required to achieve 80% power with a significance level of 0.05 and based on the observed effect size was determined to be approximately 34 participants.
+
+These results suggest a statistically significant difference between physical activity measurements obtained using the two methods, with cell phones demonstrating higher mean activity levels compared to handheld accelerometers.
+
+# Theory:
+
+11)	List the null hypothesis for the dependent t-test.
+The null hypothesis for the dependent t-test states that there is no significant difference between the means of physical activity measurements obtained using cell phones and handheld accelerometers.
+H0 : U = 0
+
+12)	List the research hypothesis for the dependent t-test.
+
+The research hypothesisfor the dependent t-test suggests that there is a significant difference between the means of physical activity measurements obtained using cell phones and handheld accelerometers.
+H1: U != 0
+
+13)	If the null were true, what would we expect the mean difference score to be?
+
+If the null hypothesis were true, we would expect the mean difference score between cell phone and handheld accelerometer measurements to be approximately zero.
+
+14)	If the null were false, what would we expect the mean difference score to be?
+
+If the null hypothesis were false, we would expect the mean difference score between cell phone and handheld accelerometer measurements to be significantly different from zero.
+
+15)	In our formula for dependent t, what is the estimation of systematic variance?
+
+The estimation of systematic variance in the dependent t-test is associated with the variability in the mean differences between the paired measurements
+
+16)	In our formula for dependent t, what is the estimation of unsystematic variance?
+
+The estimation of unsystematic variance in the dependent t-test refers to the variability in the differences between paired measurements that cannot be explained by systematic differences.
