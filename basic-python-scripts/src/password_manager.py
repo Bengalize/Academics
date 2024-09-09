@@ -1,6 +1,3 @@
-print("Bonjour")
-
-
 def save_password():
     Username = input("Please give the username: ")
     Password = input("Please give the password associated: ")
