@@ -1,0 +1,130 @@
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(rio)
+Data <- import("path_to/10_data.csv")
+
+# Calculate z-scores for the competence variable in the 'Data' dataset
+Data$z_scores <- abs(scale(Data$competence))
+
+# Identify outliers based on the criterion of z > 3.00
+outliers <- Data[Data$z_scores > 3, ]
+
+# Count the number of outliers
+num_outliers <- nrow(outliers)
+num_outliers  
+
+# Exclude outliers from the dataset
+Data_clean <- Data[Data$z_scores <= 3, ]
+
+hist(Data_clean$competence)
+hist(Data_clean$z_scores)
+
+
+library(ggplot2)
+
+# Scatter plot with regression line
+scatter <- ggplot(Data_clean, aes(x = competence, y = z_scores)) +
+  geom_point() +  
+  geom_smooth(method = "lm", se = FALSE) +  
+  labs(x = "competence", y = "z_scores") +  # Labeling axes
+  ggtitle("Scatter Plot with Linear Regression")  
+
+# Display the plot
+print(scatter)
+
+{plot(Data$competence, Data$z_scores) 
+abline(0,0)
+abline(v = 0)}
+
+# Perform ANOVA
+anova_result <- aov(Data_clean$competence ~ factor(Data_clean$participant_type), data = Data_clean)
+summary(anova_result)
+
+
+# Extract necessary values from ANOVA summary
+sum_sq_factor <- 14491  # Sum Sq for the factor (Participant type)
+sum_sq_residuals <- 2123  # Sum Sq for residuals
+df_factor <- 4  # Degrees of freedom for the factor
+MS_residuals <- 22  # Mean Sq for residuals
+
+# Calculate eta-squared
+eta_squared <- sum_sq_factor / (sum_sq_factor + sum_sq_residuals)
+
+# Calculate omega-squared
+omega_squared <- (sum_sq_factor - (df_factor * MS_residuals)) / (sum_sq_factor + MS_residuals)
+
+eta_squared
+omega_squared
+
+
+# Calculate required sample size
+required_n <- (2 * (1 - (1 - eta_squared)^(1/3))) / effect_size
+
+required_n
+
+
+# Perform pairwise t-tests without correction
+posthoc_uncorrected <- pairwise.t.test(Data_clean$competence, Data_clean$participant_type,
+                                       p.adjust.method = "none")
+
+# Perform pairwise t-tests with Bonferroni correction
+posthoc_bonferroni <- pairwise.t.test(Data_clean$competence, Data_clean$participant_type,
+                                      p.adjust.method = "bonferroni")
+
+posthoc_uncorrected
+posthoc_bonferroni
+
+
+# Load necessary library
+library(effsize)
+
+#Cohen's d for Advanced Students vs. Postgraduate Trainees
+effect_size_advanced_postgrad <- cohen.d(Data_clean$competence[Data_clean$participant_type == "advanced"],
+                                         Data_clean$competence[Data_clean$participant_type == "postgraduate"],
+                                         pooled = TRUE)
+
+#Cohen's d for Intermediate Students vs. Experienced Data Scientists
+effect_size_intermediate_experienced <- cohen.d(Data_clean$competence[Data_clean$participant_type == "intermediate"],
+                                               Data_clean$competence[Data_clean$participant_type == "experienced"],
+                                               pooled = TRUE)
+
+# Output effect sizes
+effect_size_advanced_postgrad
+effect_size_intermediate_experienced
+
+
+tableprint = matrix(NA, nrow = 3, ncol = 3)
+
+##row 1
+##fill in where it says NA with the values for the right comparison
+##column 2 = Advanced Students vs Post Graduate Trainees
+##column 3 = Intermediate students versus Experienced Data Scientists. 
+tableprint[1, ] = c("No correction p", NA, NA)
+
+##row 2
+tableprint[2, ] = c("Bonferroni p", NA, NA)
+
+##row 3
+tableprint[3, ] = c("d value", NA, NA)
+
+#don't change this
+kable(tableprint, 
+      digits = 3,
+      col.names = c("Type of Post Hoc", 
+                    "Advanced Students vs Post Graduate Trainees", 
+                    "Intermediate students versus Experienced Data Scientists"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
